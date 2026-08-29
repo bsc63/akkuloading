@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4CAF50">
+  <title>Akku-Ladezeit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>Akku-Ladezeit</h1>
+  </header>
+
+  <section class="card">
+    <h2>Allgemein</h2>
+
+    <label>Temperatur (°C)</label>
+    <input id="temp" type="number" value="20">
+
+    <label>Ladegerät (W)</label>
+    <input id="power" type="number" value="600">
+  </section>
+
+  <section class="card">
+    <h2>Akku A</h2>
+
+    <label>Start (%)</label>
+    <input id="startA" type="number" min="0" max="100">
+
+    <label>Ziel (%)</label>
+    <input id="zielA" type="number" value="100">
+
+    <div class="progress"><div id="progA"></div></div>
+    <p id="resultA" class="time"></p>
+  </section>
+
+  <section class="card">
+    <h2>Akku B</h2>
+
+    <label>Start (%)</label>
+    <input id="startB" type="number" min="0" max="100">
+
+    <label>Ziel (%)</label>
+    <input id="zielB" type="number" value="100">
+
+    <div class="progress"><div id="progB"></div></div>
+    <p id="resultB" class="time"></p>
+  </section>
+
+  <button id="calc">Berechnen</button>
+
+  <script src="app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+</body>
+</html>
