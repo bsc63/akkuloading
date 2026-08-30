@@ -60,7 +60,7 @@
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").then(reg => {
-        reg.active?.postMessage({ cmd: "version", version: "2026-08-30-1" });
+        // Version wird in app.js über sendToSW gesendet
       });
     }
   </script>
