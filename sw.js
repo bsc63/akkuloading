@@ -1,19 +1,20 @@
+let currentVersion = null;
 let timers = {};
 
-self.addEventListener("install", e => {
-  e.waitUntil(self.skipWaiting());
-});
+self.addEventListener("message", event => {
+  const data = event.data;
 
-self.addEventListener("activate", e => {
-  e.waitUntil(self.clients.claim());
-});
+  if (data.cmd === "version") {
+    if (currentVersion && currentVersion !== data.version) {
+      caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
 
-self.addEventListener("message", e => {
-  const data = e.data;
+      for (const id in timers) clearTimeout(timers[id]);
+      timers = {};
 
-  if (data.cmd === "clearTimers") {
-    for (const id in timers) clearTimeout(timers[id]);
-    timers = {};
+      self.skipWaiting();
+      self.clients.claim();
+    }
+    currentVersion = data.version;
   }
 
   if (data.cmd === "startTimer") {
@@ -22,8 +23,26 @@ self.addEventListener("message", e => {
     if (timers[id]) clearTimeout(timers[id]);
 
     timers[id] = setTimeout(() => {
-      self.registration.showNotification(title, { body });
+      self.registration.showNotification(title, {
+        body,
+        icon: "icons/icon-192.png"
+      });
+
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ cmd: "done", id });
+        });
+      });
+
       delete timers[id];
     }, delay);
   }
+
+  if (data.cmd === "clearTimers") {
+    for (const id in timers) clearTimeout(timers[id]);
+    timers = {};
+  }
 });
+
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
