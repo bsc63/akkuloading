@@ -1,3 +1,6 @@
+let isRunning = false;
+
+
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
@@ -31,6 +34,10 @@ function startProgress(durationMin, element) {
 }
 
 document.getElementById("calc").addEventListener("click", async () => {
+
+if (isRunning) return;   // verhindert erneutes Starten
+  isRunning = true;
+  document.getElementById("calc").disabled = true;
 
   const temp = Number(document.getElementById("temp").value);
   const power = Number(document.getElementById("power").value);
@@ -103,3 +110,21 @@ document.getElementById("calc").addEventListener("click", async () => {
     document.getElementById("progB").style.width = "0%";
   }
 });
+
+document.getElementById("reset").addEventListener("click", () => {
+  // UI zurücksetzen
+  document.getElementById("resultA").innerText = "";
+  document.getElementById("resultB").innerText = "";
+  document.getElementById("progA").style.width = "0%";
+  document.getElementById("progB").style.width = "0%";
+
+  // Timer im Service Worker löschen
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active.postMessage({ cmd: "clearTimers" });
+  });
+
+  // Berechnen wieder erlauben
+  isRunning = false;
+  document.getElementById("calc").disabled = false;
+});
+
