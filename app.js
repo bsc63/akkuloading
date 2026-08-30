@@ -3,6 +3,22 @@ let stopProgress = false;
 
 const APP_VERSION = "2026-08-30-1";
 
+function sendToSW(msg) {
+  navigator.serviceWorker.ready.then(reg => {
+    if (reg.active) {
+      reg.active.postMessage(msg);
+    } else if (reg.waiting) {
+      reg.waiting.postMessage(msg);
+    } else if (reg.installing) {
+      reg.installing.postMessage(msg);
+    } else {
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        navigator.serviceWorker.controller?.postMessage(msg);
+      });
+    }
+  });
+}
+
 function updateStatus(state) {
   const status = document.getElementById("status");
   status.classList.remove("ready", "running", "waiting", "done");
@@ -97,10 +113,8 @@ document.getElementById("calc").addEventListener("click", async () => {
     await Notification.requestPermission();
   }
 
-  navigator.serviceWorker.ready.then(reg => {
-    reg.active?.postMessage({ cmd: "clearTimers" });
-    reg.active?.postMessage({ cmd: "version", version: APP_VERSION });
-  });
+  sendToSW({ cmd: "clearTimers" });
+  sendToSW({ cmd: "version", version: APP_VERSION });
 
   if (hasA && hasB) updateStatus("runningBoth");
   else if (hasA) updateStatus("runningA");
@@ -115,15 +129,16 @@ document.getElementById("calc").addEventListener("click", async () => {
 
     startProgress(minA, document.getElementById("progA"));
 
-    navigator.serviceWorker.ready.then(reg => {
-      reg.active?.postMessage({
-        cmd: "startTimer",
-        id: "A",
-        delay: minA * 60000,
-        title: "Akku A fertig!",
-        body: "Akku A ist vollständig geladen."
-      });
+    sendToSW({
+      cmd: "startTimer",
+      id: "A",
+      delay: minA * 60000,
+      title: "Akku A fertig!",
+      body: "Akku A ist vollständig geladen."
     });
+  } else {
+    document.getElementById("resultA").innerText = "";
+    document.getElementById("progA").style.width = "0%";
   }
 
   if (hasB) {
@@ -135,15 +150,16 @@ document.getElementById("calc").addEventListener("click", async () => {
 
     startProgress(minB, document.getElementById("progB"));
 
-    navigator.serviceWorker.ready.then(reg => {
-      reg.active?.postMessage({
-        cmd: "startTimer",
-        id: "B",
-        delay: minB * 60000,
-        title: "Akku B fertig!",
-        body: "Akku B ist vollständig geladen."
-      });
+    sendToSW({
+      cmd: "startTimer",
+      id: "B",
+      delay: minB * 60000,
+      title: "Akku B fertig!",
+      body: "Akku B ist vollständig geladen."
     });
+  } else {
+    document.getElementById("resultB").innerText = "";
+    document.getElementById("progB").style.width = "0%";
   }
 });
 
@@ -155,9 +171,7 @@ document.getElementById("reset").addEventListener("click", () => {
   document.getElementById("progA").style.width = "0%";
   document.getElementById("progB").style.width = "0%";
 
-  navigator.serviceWorker.ready.then(reg => {
-    reg.active?.postMessage({ cmd: "clearTimers" });
-  });
+  sendToSW({ cmd: "clearTimers" });
 
   isRunning = false;
   updateButtons();
