@@ -165,49 +165,44 @@ document.getElementById("calc").addEventListener("click", async () => {
   }
 
   // ⭐ GOOGLE-KALENDER statt ICS
-  if (hasA && hasB) {
-    if (fertigA.getTime() === fertigB.getTime()) {
-      openGoogleCalendar({
-        title: "Beide Akkus fertig",
-        start: fertigA,
-        end: new Date(fertigA.getTime() + 5 * 60000),
-        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-      });
-      updateStatus("doneBoth");
-    } else {
-      openGoogleCalendar({
-        title: "Akku A fertig",
-        start: fertigA,
-        end: new Date(fertigA.getTime() + 5 * 60000),
-        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-      });
+  
+if (hasA && hasB) {
+  // EIN Google-Draft mit ZWEI Terminen
+  const eventText =
+    `Akku A fertig: ${fertigA.toLocaleString()}\n` +
+    `Akku B fertig: ${fertigB.toLocaleString()}\n\n` +
+    `Automatisch erzeugt durch Akku-Ladezeit-App`;
 
-      openGoogleCalendar({
-        title: "Akku B fertig",
-        start: fertigB,
-        end: new Date(fertigB.getTime() + 5 * 60000),
-        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-      });
+  openGoogleCalendar({
+    title: "Akku-Ladezeiten",
+    start: fertigA, // Google braucht irgendeinen Startpunkt
+    end: new Date(fertigA.getTime() + 5 * 60000),
+    description: eventText,
+    location: ""
+  });
 
-      updateStatus("doneBoth");
-    }
-  } else if (hasA) {
-    openGoogleCalendar({
-      title: "Akku A fertig",
-      start: fertigA,
-      end: new Date(fertigA.getTime() + 5 * 60000),
-      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-    });
-    updateStatus("doneA");
-  } else if (hasB) {
-    openGoogleCalendar({
-      title: "Akku B fertig",
-      start: fertigB,
-      end: new Date(fertigB.getTime() + 5 * 60000),
-      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-    });
-    updateStatus("doneB");
-  }
+  updateStatus("doneBoth");
+
+} else if (hasA) {
+  openGoogleCalendar({
+    title: "Akku A fertig",
+    start: fertigA,
+    end: new Date(fertigA.getTime() + 5 * 60000),
+    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+  });
+  updateStatus("doneA");
+
+} else if (hasB) {
+  openGoogleCalendar({
+    title: "Akku B fertig",
+    start: fertigB,
+    end: new Date(fertigB.getTime() + 5 * 60000),
+    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+  });
+  updateStatus("doneB");
+}
+
+
 
   isRunning = false;
   updateButtons();
