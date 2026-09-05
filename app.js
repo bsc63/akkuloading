@@ -43,6 +43,44 @@ END:VCALENDAR`;
   URL.revokeObjectURL(url);
 }
 
+function downloadICSCombined(fertigA, fertigB) {
+  const dtStartA = fertigA.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const dtEndA = new Date(fertigA.getTime() + 5 * 60000)
+    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  const dtStartB = fertigB.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const dtEndB = new Date(fertigB.getTime() + 5 * 60000)
+    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+  const ics = `
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Akku A fertig
+DTSTART:${dtStartA}
+DTEND:${dtEndA}
+DESCRIPTION:Automatisch erzeugt durch Akku-Ladezeit-App
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Akku B fertig
+DTSTART:${dtStartB}
+DTEND:${dtEndB}
+DESCRIPTION:Automatisch erzeugt durch Akku-Ladezeit-App
+END:VEVENT
+END:VCALENDAR`;
+
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "akkus_fertig.ics";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
 function updateStatus(state) {
   const status = document.getElementById("status");
   status.classList.remove("ready", "running", "waiting", "done");
@@ -165,21 +203,23 @@ document.getElementById("calc").addEventListener("click", async () => {
 
   // ICS-Logik
   if (hasA && hasB) {
-    if (fertigA.getTime() === fertigB.getTime()) {
-      downloadICS("Beide Akkus fertig", fertigA);
-      updateStatus("doneBoth");
-    } else {
-      downloadICS("Akku A fertig", fertigA);
-      downloadICS("Akku B fertig", fertigB);
-      updateStatus("doneBoth");
-    }
-  } else if (hasA) {
-    downloadICS("Akku A fertig", fertigA);
-    updateStatus("doneA");
-  } else if (hasB) {
-    downloadICS("Akku B fertig", fertigB);
-    updateStatus("doneB");
+  if (fertigA.getTime() === fertigB.getTime()) {
+    // Beide Akkus haben exakt die gleiche Fertigzeit → EIN Event
+    downloadICS("Beide Akkus fertig", fertigA);
+    updateStatus("doneBoth");
+  } else {
+    // Unterschiedliche Zeiten → EINE ICS-Datei mit ZWEI Events
+    downloadICSCombined(fertigA, fertigB);
+    updateStatus("doneBoth");
   }
+} else if (hasA) {
+  downloadICS("Akku A fertig", fertigA);
+  updateStatus("doneA");
+} else if (hasB) {
+  downloadICS("Akku B fertig", fertigB);
+  updateStatus("doneB");
+}
+
 
   isRunning = false;
   updateButtons();
