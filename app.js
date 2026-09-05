@@ -1,3 +1,10 @@
+let calendarButtons = null;
+
+window.addEventListener("load", () => {
+  calendarButtons = document.getElementById("calendarButtons");
+});
+
+
 let isRunning = false;
 let stopProgress = false;
 
