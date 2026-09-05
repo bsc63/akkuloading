@@ -134,8 +134,8 @@ button:disabled {
 }
 
 .status.running {
-  background: #ffeb3b;
-  color: #795548;
+  background: #f0f0f0;
+  color: #555;
 }
 
 .status.done {
