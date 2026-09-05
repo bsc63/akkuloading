@@ -205,7 +205,7 @@ setTimeout(() => {
         });
       });
 
-      updateStatus("doneBoth");
+     
 
     } else {
       // ZWEI Buttons
