@@ -129,7 +129,6 @@ function ladezeitBerechnen(start, ziel, temp, power) {
   const zeitStunden = zeitCC + zeitCV;
 
   return zeitStunden * 60; // Minuten
-}
 
 // ⭐ KORREKTUR: startProgress wieder vollständig!
 function startProgress(durationMin, element) {
