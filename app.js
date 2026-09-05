@@ -19,6 +19,21 @@ function sendToSW(msg) {
   });
 }
 
+function createFinishEvent(title, dateObj) {
+  const startISO = dateObj.toISOString().slice(0, 16);
+  const endISO = new Date(dateObj.getTime() + 5 * 60000).toISOString().slice(0, 16);
+
+  window.createCalendarEvent({
+    title: title,
+    start_at: startISO,
+    end_at: endISO,
+    description: "Automatisch erzeugt durch Akku-Ladezeit-App",
+    reminder_minutes_before: 0,
+    reminder_type: "popup"
+  });
+}
+
+
 function updateStatus(state) {
   const status = document.getElementById("status");
   status.classList.remove("ready", "running", "waiting", "done");
@@ -128,6 +143,9 @@ document.getElementById("calc").addEventListener("click", async () => {
       `Akku A fertig um ${fertigA.toLocaleTimeString()}`;
 
     startProgress(minA, document.getElementById("progA"));
+    
+    // NEU: automatischer Kalendereintrag
+    createFinishEvent("Akku A fertig", fertigA);
 
     sendToSW({
       cmd: "startTimer",
@@ -149,6 +167,9 @@ document.getElementById("calc").addEventListener("click", async () => {
       `Akku B fertig um ${fertigB.toLocaleTimeString()}`;
 
     startProgress(minB, document.getElementById("progB"));
+    
+    // NEU: automatischer Kalendereintrag
+    createFinishEvent("Akku B fertig", fertigB);
 
     sendToSW({
       cmd: "startTimer",
