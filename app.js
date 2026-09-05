@@ -1,9 +1,9 @@
 let isRunning = false;
 let stopProgress = false;
 
-const APP_VERSION = "2026-08-30-2";
+const APP_VERSION = "2026-08-30-3";
 
-// SW-Kommunikation bleibt minimal erhalten
+// Minimaler SW-Call (optional)
 function sendToSW(msg) {
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.ready.then(reg => {
@@ -11,15 +11,11 @@ function sendToSW(msg) {
   });
 }
 
-// ICS-Export
+// ICS für EINEN Akku
 function downloadICS(title, dateObj) {
-  console.log("ICS wird erzeugt:", title, dateObj);
-
   const dtStart = dateObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const dtEnd = new Date(dateObj.getTime() + 5 * 60000)
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .split(".")[0] + "Z";
+    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
   const ics = `
 BEGIN:VCALENDAR
@@ -43,6 +39,7 @@ END:VCALENDAR`;
   URL.revokeObjectURL(url);
 }
 
+// ICS für ZWEI Akkus in EINER Datei
 function downloadICSCombined(fertigA, fertigB) {
   const dtStartA = fertigA.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const dtEndA = new Date(fertigA.getTime() + 5 * 60000)
@@ -74,16 +71,15 @@ END:VCALENDAR`;
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = "akkus_fertig.ics";
+  a.download = `akkus_fertig.ics`;
   a.click();
 
   URL.revokeObjectURL(url);
 }
 
-
 function updateStatus(state) {
   const status = document.getElementById("status");
-  status.classList.remove("ready", "running", "waiting", "done");
+  status.classList.remove("ready", "running", "done");
 
   const map = {
     ready: "Bereit",
@@ -105,7 +101,7 @@ function updateStatus(state) {
 
 function updateButtons() {
   document.getElementById("calc").disabled = isRunning;
-  document.getElementById("reset").disabled = !isRunning;
+  document.getElementById("reset").disabled = false; // Reset immer aktiv
 }
 
 function ladezeitBerechnen(start, ziel, temp, power) {
@@ -183,9 +179,6 @@ document.getElementById("calc").addEventListener("click", async () => {
       `Akku A fertig um ${fertigA.toLocaleTimeString()}`;
 
     startProgress(minA, document.getElementById("progA"));
-  } else {
-    document.getElementById("resultA").innerText = "";
-    document.getElementById("progA").style.width = "0%";
   }
 
   if (hasB) {
@@ -196,48 +189,38 @@ document.getElementById("calc").addEventListener("click", async () => {
       `Akku B fertig um ${fertigB.toLocaleTimeString()}`;
 
     startProgress(minB, document.getElementById("progB"));
-  } else {
-    document.getElementById("resultB").innerText = "";
-    document.getElementById("progB").style.width = "0%";
   }
 
   // ICS-Logik
   if (hasA && hasB) {
-  if (fertigA.getTime() === fertigB.getTime()) {
-    // Beide Akkus haben exakt die gleiche Fertigzeit → EIN Event
-    downloadICS("Beide Akkus fertig", fertigA);
-    updateStatus("doneBoth");
-  } else {
-    // Unterschiedliche Zeiten → EINE ICS-Datei mit ZWEI Events
-    downloadICSCombined(fertigA, fertigB);
-    updateStatus("doneBoth");
+    if (fertigA.getTime() === fertigB.getTime()) {
+      downloadICS("Beide Akkus fertig", fertigA);
+      updateStatus("doneBoth");
+    } else {
+      downloadICSCombined(fertigA, fertigB);
+      updateStatus("doneBoth");
+    }
+  } else if (hasA) {
+    downloadICS("Akku A fertig", fertigA);
+    updateStatus("doneA");
+  } else if (hasB) {
+    downloadICS("Akku B fertig", fertigB);
+    updateStatus("doneB");
   }
-} else if (hasA) {
-  downloadICS("Akku A fertig", fertigA);
-  updateStatus("doneA");
-} else if (hasB) {
-  downloadICS("Akku B fertig", fertigB);
-  updateStatus("doneB");
-}
-
 
   isRunning = false;
   updateButtons();
 });
 
+// NEUER RESET: Seite neu laden + Standardwerte setzen
 document.getElementById("reset").addEventListener("click", () => {
-  stopProgress = true;
+  window.location.reload();
+});
 
-  document.getElementById("resultA").innerText = "";
-  document.getElementById("resultB").innerText = "";
-  document.getElementById("progA").style.width = "0%";
-  document.getElementById("progB").style.width = "0%";
-
-  sendToSW({ cmd: "clearTimers" });
-
-  isRunning = false;
-  updateButtons();
-  updateStatus("ready");
+// Standardwerte setzen beim Laden
+window.addEventListener("load", () => {
+  document.getElementById("power").value = 1000;
+  document.getElementById("temp").value = 15;
 });
 
 updateButtons();
