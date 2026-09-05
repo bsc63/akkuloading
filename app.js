@@ -144,9 +144,11 @@ document.getElementById("calc").addEventListener("click", async () => {
 
   let fertigA = null;
   let fertigB = null;
+  let maxMin = 0;
 
   if (hasA) {
     const minA = ladezeitBerechnen(Number(startA), Number(zielA), temp, power);
+    maxMin = Math.max(maxMin, minA);
     fertigA = new Date(Date.now() + minA * 60000);
 
     document.getElementById("resultA").innerText =
@@ -157,6 +159,7 @@ document.getElementById("calc").addEventListener("click", async () => {
 
   if (hasB) {
     const minB = ladezeitBerechnen(Number(startB), Number(zielB), temp, power);
+    maxMin = Math.max(maxMin, minB);
     fertigB = new Date(Date.now() + minB * 60000);
 
     document.getElementById("resultB").innerText =
@@ -164,6 +167,13 @@ document.getElementById("calc").addEventListener("click", async () => {
 
     startProgress(minB, document.getElementById("progB"));
   }
+
+// Status nach Ablauf der längeren Ladezeit umschalten
+setTimeout(() => {
+  if (hasA && hasB) updateStatus("doneBoth");
+  else if (hasA) updateStatus("doneA");
+  else if (hasB) updateStatus("doneB");
+}, maxMin * 60000);
 
   // ⭐ Kalender-Buttons erzeugen
   calendarButtons.innerHTML = "";
@@ -217,7 +227,7 @@ document.getElementById("calc").addEventListener("click", async () => {
         });
       });
 
-      updateStatus("doneBoth");
+      
     }
 
   } else if (hasA) {
@@ -231,7 +241,7 @@ document.getElementById("calc").addEventListener("click", async () => {
       });
     });
 
-    updateStatus("doneA");
+   
 
   } else if (hasB) {
 
@@ -244,7 +254,7 @@ document.getElementById("calc").addEventListener("click", async () => {
       });
     });
 
-    updateStatus("doneB");
+   
   }
 
   isRunning = false;
