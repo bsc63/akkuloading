@@ -71,31 +71,66 @@ function updateButtons() {
   document.getElementById("reset").disabled = false;
 }
 
-// Realistische Ladezeit
+// // Realistische Ladezeit
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
 
   const delta = (ziel - start) / 100;
-  const energie = kapazitaetWh * delta;
 
-  const ccAnteil = Math.min(delta, 0.60);
-  const ccZeit = (energie * (ccAnteil / delta)) / (power * eff);
+  // Temperatur-Drosselung für CC-Phase
+  function ccTempFaktor(temp) {
+    if (temp < 0) return 0.40;
+    if (temp < 5) return 0.55;
+    if (temp < 10) return 0.70;
+    if (temp < 15) return 0.85;
+    if (temp <= 30) return 1.00;
+    if (temp <= 35) return 0.90;
+    if (temp <= 40) return 0.75;
+    return 0.60;
+  }
 
-  const cvAnteil = Math.max(delta - 0.60, 0);
-  const cvZeit = (energie * (cvAnteil / delta)) / (power * eff) * 2.5;
+  // SOC-abhängige CV-Drosselung
+  function cvSocFaktor(soc) {
+    if (soc < 0.85) return 1.0;
+    if (soc < 0.90) return 1.3;
+    if (soc < 0.95) return 1.8;
+    return 2.5;
+  }
 
-  let tempFaktor = temp < 10 ? 1.25 : temp > 35 ? 1.15 : 1.0;
+  const socStart = start / 100;
+  const socZiel = ziel / 100;
+  const ccEnd = 0.70;
 
-  return (ccZeit + cvZeit) * tempFaktor * 60;
+  let ccAnteil = 0;
+  let cvAnteil = 0;
+
+  if (socZiel <= ccEnd) {
+    ccAnteil = delta;
+  } else if (socStart >= ccEnd) {
+    cvAnteil = delta;
+  } else {
+    ccAnteil = ccEnd - socStart;
+    cvAnteil = socZiel - ccEnd;
+  }
+
+  // CC-Phase (linear, temperaturgedrosselt)
+  const energieCC = kapazitaetWh * ccAnteil;
+  const zeitCC = (energieCC / (power * eff)) * ccTempFaktor(temp);
+
+  // CV-Phase (exponentielle Abbremsung + SOC-Drosselung)
+  const energieCV = kapazitaetWh * cvAnteil;
+
+  const a = 3.2;
+  const k = 0.9;
+  const cvExp = k * (Math.exp(a * cvAnteil) - 1);
+
+  const zeitCV = (energieCV / (power * eff)) * cvExp * cvSocFaktor(socZiel);
+
+  const zeitStunden = zeitCC + zeitCV;
+
+  return zeitStunden * 60; // Minuten
 }
-
-function startProgress(durationMin, element) {
-  stopProgress = false;
-
-  const start = Date.now();
-  const end = start + durationMin * 60000;
-
   function update() {
     if (stopProgress) return;
 
