@@ -1,7 +1,7 @@
 let isRunning = false;
 let stopProgress = false;
 
-const APP_VERSION = "2026-08-30-3";
+const APP_VERSION = "2026-09-05-1";
 
 // Minimaler SW-Call (optional)
 function sendToSW(msg) {
@@ -104,6 +104,7 @@ function updateButtons() {
   document.getElementById("reset").disabled = false; // Reset immer aktiv
 }
 
+// ⭐ REALISTISCHE LADEZEIT-FORMEL
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
@@ -111,10 +112,18 @@ function ladezeitBerechnen(start, ziel, temp, power) {
   const delta = (ziel - start) / 100;
   const energie = kapazitaetWh * delta;
 
-  let tempFaktor = temp < 10 ? 1.25 : temp > 35 ? 1.15 : 1.0;
-  let cvVerlangsamung = ziel > 85 ? 1.3 : 1.0;
+  // CC-Phase: 0–60%
+  const ccAnteil = Math.min(delta, 0.60);
+  const ccZeit = (energie * (ccAnteil / delta)) / (power * eff);
 
-  return (energie / (power * eff)) * tempFaktor * cvVerlangsamung * 60;
+  // CV-Phase: 60–100% (realistisch 2.5x langsamer)
+  const cvAnteil = Math.max(delta - 0.60, 0);
+  const cvZeit = (energie * (cvAnteil / delta)) / (power * eff) * 2.5;
+
+  // Temperaturfaktor
+  let tempFaktor = temp < 10 ? 1.25 : temp > 35 ? 1.15 : 1.0;
+
+  return (ccZeit + cvZeit) * tempFaktor * 60; // Minuten
 }
 
 function startProgress(durationMin, element) {
@@ -212,7 +221,7 @@ document.getElementById("calc").addEventListener("click", async () => {
   updateButtons();
 });
 
-// NEUER RESET: Seite neu laden + Standardwerte setzen
+// RESET = Seite neu laden
 document.getElementById("reset").addEventListener("click", () => {
   window.location.reload();
 });
