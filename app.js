@@ -1,31 +1,21 @@
 let isRunning = false;
 let stopProgress = false;
 
-const APP_VERSION = "2026-08-30-1";
+const APP_VERSION = "2026-08-30-2";
 
-// SW-Kommunikation bleibt drin, falls du später wieder etwas damit machen willst
+// SW-Kommunikation bleibt minimal erhalten
 function sendToSW(msg) {
   if (!("serviceWorker" in navigator)) return;
-
   navigator.serviceWorker.ready.then(reg => {
-    if (reg.active) {
-      reg.active.postMessage(msg);
-    } else if (reg.waiting) {
-      reg.waiting.postMessage(msg);
-    } else if (reg.installing) {
-      reg.installing.postMessage(msg);
-    } else {
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        navigator.serviceWorker.controller?.postMessage(msg);
-      });
-    }
+    reg.active?.postMessage(msg);
   });
 }
 
-// ICS-Export: erzeugt eine Kalenderdatei, die der Nutzer öffnen kann
+// ICS-Export
 function downloadICS(title, dateObj) {
-  const dtStart = dateObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  console.log("ICS wird erzeugt:", title, dateObj);
 
+  const dtStart = dateObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const dtEnd = new Date(dateObj.getTime() + 5 * 60000)
     .toISOString()
     .replace(/[-:]/g, "")
@@ -47,7 +37,7 @@ END:VCALENDAR`;
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = "akku_fertig.ics";
+  a.download = `${title.replace(/\s+/g, "_")}.ics`;
   a.click();
 
   URL.revokeObjectURL(url);
@@ -62,27 +52,22 @@ function updateStatus(state) {
     runningA: "Berechnung läuft (Akku A)…",
     runningB: "Berechnung läuft (Akku B)…",
     runningBoth: "Berechnung läuft (beide Akkus)…",
-    waiting: "Warte auf Kalender-Eintrag…",
-    doneA: "Akku A ist fertig (Kalender-Eintrag erstellt)!",
-    doneB: "Akku B ist fertig (Kalender-Eintrag erstellt)!",
-    doneBoth: "Beide Akkus sind fertig (Kalender-Einträge erstellt)!"
+    doneA: "Akku A ist fertig (ICS erstellt)",
+    doneB: "Akku B ist fertig (ICS erstellt)",
+    doneBoth: "Beide Akkus sind fertig (ICS erstellt)"
   };
 
   status.innerText = map[state];
   status.classList.add(
     state.startsWith("done") ? "done" :
     state.startsWith("running") ? "running" :
-    state === "waiting" ? "waiting" :
     "ready"
   );
 }
 
 function updateButtons() {
-  const calcBtn = document.getElementById("calc");
-  const resetBtn = document.getElementById("reset");
-
-  calcBtn.disabled = isRunning;
-  resetBtn.disabled = !isRunning;
+  document.getElementById("calc").disabled = isRunning;
+  document.getElementById("reset").disabled = !isRunning;
 }
 
 function ladezeitBerechnen(start, ziel, temp, power) {
@@ -147,24 +132,19 @@ document.getElementById("calc").addEventListener("click", async () => {
   else if (hasA) updateStatus("runningA");
   else updateStatus("runningB");
 
-  // Service-Worker-Timer werden nicht mehr genutzt, aber Clear bleibt drin
   sendToSW({ cmd: "clearTimers" });
-  sendToSW({ cmd: "version", version: APP_VERSION });
 
-  let doneCount = 0;
+  let fertigA = null;
+  let fertigB = null;
 
   if (hasA) {
     const minA = ladezeitBerechnen(Number(startA), Number(zielA), temp, power);
-    const fertigA = new Date(Date.now() + minA * 60000);
+    fertigA = new Date(Date.now() + minA * 60000);
 
     document.getElementById("resultA").innerText =
       `Akku A fertig um ${fertigA.toLocaleTimeString()}`;
 
     startProgress(minA, document.getElementById("progA"));
-
-    // ICS für Akku A
-    downloadICS("Akku A fertig", fertigA);
-    doneCount++;
   } else {
     document.getElementById("resultA").innerText = "";
     document.getElementById("progA").style.width = "0%";
@@ -172,25 +152,34 @@ document.getElementById("calc").addEventListener("click", async () => {
 
   if (hasB) {
     const minB = ladezeitBerechnen(Number(startB), Number(zielB), temp, power);
-    const fertigB = new Date(Date.now() + minB * 60000);
+    fertigB = new Date(Date.now() + minB * 60000);
 
     document.getElementById("resultB").innerText =
       `Akku B fertig um ${fertigB.toLocaleTimeString()}`;
 
     startProgress(minB, document.getElementById("progB"));
-
-    // ICS für Akku B
-    downloadICS("Akku B fertig", fertigB);
-    doneCount++;
   } else {
     document.getElementById("resultB").innerText = "";
     document.getElementById("progB").style.width = "0%";
   }
 
-  // Status nach ICS-Erzeugung
-  if (doneCount === 2) updateStatus("doneBoth");
-  else if (hasA) updateStatus("doneA");
-  else if (hasB) updateStatus("doneB");
+  // ICS-Logik
+  if (hasA && hasB) {
+    if (fertigA.getTime() === fertigB.getTime()) {
+      downloadICS("Beide Akkus fertig", fertigA);
+      updateStatus("doneBoth");
+    } else {
+      downloadICS("Akku A fertig", fertigA);
+      downloadICS("Akku B fertig", fertigB);
+      updateStatus("doneBoth");
+    }
+  } else if (hasA) {
+    downloadICS("Akku A fertig", fertigA);
+    updateStatus("doneA");
+  } else if (hasB) {
+    downloadICS("Akku B fertig", fertigB);
+    updateStatus("doneB");
+  }
 
   isRunning = false;
   updateButtons();
@@ -213,11 +202,3 @@ document.getElementById("reset").addEventListener("click", () => {
 
 updateButtons();
 updateStatus("ready");
-
-// SW-Nachrichten sind für Timer nicht mehr relevant, bleiben aber als Reserve drin
-navigator.serviceWorker.addEventListener("message", event => {
-  if (event.data.cmd === "done") {
-    if (event.data.id === "A") updateStatus("doneA");
-    if (event.data.id === "B") updateStatus("doneB");
-  }
-});
