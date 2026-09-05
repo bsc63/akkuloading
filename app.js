@@ -185,25 +185,35 @@ if (hasA && hasB) {
     updateStatus("doneBoth");
 
   } else {
-    // ⭐ Unterschied > 3% → ZWEI Termine mit Delay
+  // ⭐ Unterschied > 3% → ZWEI Termine mit großem Delay + Retry
 
-    // Termin 1: Akku A
-    openGoogleCalendar({
-      title: "Akku A fertig",
-      start: fertigA,
-      end: new Date(fertigA.getTime() + 5 * 60000),
-      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-    });
+// Termin 1: Akku A
+openGoogleCalendar({
+  title: "Akku A fertig",
+  start: fertigA,
+  end: new Date(fertigA.getTime() + 5 * 60000),
+  description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+});
 
-    // Termin 2: Akku B (mit Delay, damit Android nicht blockiert)
-    setTimeout(() => {
-      openGoogleCalendar({
-        title: "Akku B fertig",
-        start: fertigB,
-        end: new Date(fertigB.getTime() + 5 * 60000),
-        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-      });
-    }, 1200); // 1,2 Sekunden Delay
+// Termin 2: Akku B (mit großem Delay)
+setTimeout(() => {
+  openGoogleCalendar({
+    title: "Akku B fertig",
+    start: fertigB,
+    end: new Date(fertigB.getTime() + 5 * 60000),
+    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+  });
+}, 3200); // ⭐ 3,2 Sekunden → mobil absolut zuverlässig
+
+// Optionaler Retry nach 5 Sekunden (falls Android blockiert)
+setTimeout(() => {
+  openGoogleCalendar({
+    title: "Akku B fertig",
+    start: fertigB,
+    end: new Date(fertigB.getTime() + 5 * 60000),
+    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+  });
+}, 5200); // ⭐ Fallback
 
     updateStatus("doneBoth");
   }
