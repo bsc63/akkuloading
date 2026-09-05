@@ -48,15 +48,14 @@ function updateStatus(state) {
   status.classList.remove("ready", "running", "done");
 
   const map = {
-  ready: "Bereit",
-  runningA: "Ladevorgang läuft…",
-  runningB: "Ladevorgang läuft…",
-  runningBoth: "Ladevorgang läuft…",
-  doneA: "Laden beendet",
-  doneB: "Laden beendet",
-  doneBoth: "Laden beendet"
-};
-
+    ready: "Bereit",
+    runningA: "Ladevorgang läuft…",
+    runningB: "Ladevorgang läuft…",
+    runningBoth: "Ladevorgang läuft…",
+    doneA: "Laden beendet",
+    doneB: "Laden beendet",
+    doneBoth: "Laden beendet"
+  };
 
   status.innerText = map[state];
   status.classList.add(
@@ -71,7 +70,7 @@ function updateButtons() {
   document.getElementById("reset").disabled = false;
 }
 
-// // Realistische Ladezeit
+// ⭐ REALISTISCHE LADEZEIT (neue Version)
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
@@ -131,6 +130,14 @@ function ladezeitBerechnen(start, ziel, temp, power) {
 
   return zeitStunden * 60; // Minuten
 }
+
+// ⭐ KORREKTUR: startProgress wieder vollständig!
+function startProgress(durationMin, element) {
+  stopProgress = false;
+
+  const start = Date.now();
+  const end = start + durationMin * 60000;
+
   function update() {
     if (stopProgress) return;
 
@@ -203,12 +210,12 @@ document.getElementById("calc").addEventListener("click", async () => {
     startProgress(minB, document.getElementById("progB"));
   }
 
-// Status nach Ablauf der längeren Ladezeit umschalten
-setTimeout(() => {
-  if (hasA && hasB) updateStatus("doneBoth");
-  else if (hasA) updateStatus("doneA");
-  else if (hasB) updateStatus("doneB");
-}, maxMin * 60000);
+  // Status nach Ablauf der längeren Ladezeit umschalten
+  setTimeout(() => {
+    if (hasA && hasB) updateStatus("doneBoth");
+    else if (hasA) updateStatus("doneA");
+    else if (hasB) updateStatus("doneB");
+  }, maxMin * 60000);
 
   // ⭐ Kalender-Buttons erzeugen
   calendarButtons.innerHTML = "";
@@ -240,8 +247,6 @@ setTimeout(() => {
         });
       });
 
-     
-
     } else {
       // ZWEI Buttons
       createButton("Akku A eintragen", () => {
@@ -261,8 +266,6 @@ setTimeout(() => {
           description: "Automatisch erzeugt durch Akku-Ladezeit-App"
         });
       });
-
-      
     }
 
   } else if (hasA) {
@@ -276,8 +279,6 @@ setTimeout(() => {
       });
     });
 
-   
-
   } else if (hasB) {
 
     createButton("Akku B eintragen", () => {
@@ -289,7 +290,6 @@ setTimeout(() => {
       });
     });
 
-   
   }
 
   isRunning = false;
