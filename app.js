@@ -164,56 +164,95 @@ document.getElementById("calc").addEventListener("click", async () => {
     startProgress(minB, document.getElementById("progB"));
   }
 
-// ⭐ GOOGLE-KALENDER-LOGIK MIT 3%-REGEL + DELAY
+// ⭐ GOOGLE-KALENDER-LOGIK MIT BUTTONS BEI >3%
+
+const calendarButtons = document.getElementById("calendarButtons");
+calendarButtons.innerHTML = ""; // alte Buttons entfernen
 
 const diff = Math.abs(Number(startA) - Number(startB)); // Ladezustands-Differenz in %
+
+function createButton(label, callback) {
+  const btn = document.createElement("button");
+  btn.innerText = label;
+  btn.style.margin = "10px 0";
+  btn.style.padding = "12px";
+  btn.style.width = "100%";
+  btn.style.fontSize = "18px";
+  btn.onclick = callback;
+  calendarButtons.appendChild(btn);
+}
 
 if (hasA && hasB) {
 
   if (diff <= 3) {
-    // ⭐ Beide Akkus haben fast gleichen Ladezustand → EIN Termin
-    openGoogleCalendar({
-      title: "Beide Akkus fertig",
-      start: fertigA < fertigB ? fertigA : fertigB,
-      end: new Date((fertigA < fertigB ? fertigA : fertigB).getTime() + 5 * 60000),
-      description:
-        `Akku A fertig: ${fertigA.toLocaleString()}\n` +
-        `Akku B fertig: ${fertigB.toLocaleString()}\n\n` +
-        `Automatisch erzeugt durch Akku-Ladezeit-App`
+    // ⭐ EIN Termin für beide Akkus
+    createButton("Beide Akkus eintragen", () => {
+      const start = fertigA < fertigB ? fertigA : fertigB;
+      openGoogleCalendar({
+        title: "Beide Akkus fertig",
+        start: start,
+        end: new Date(start.getTime() + 5 * 60000),
+        description:
+          `Akku A fertig: ${fertigA.toLocaleString()}\n` +
+          `Akku B fertig: ${fertigB.toLocaleString()}\n\n` +
+          `Automatisch erzeugt durch Akku-Ladezeit-App`
+      });
     });
 
     updateStatus("doneBoth");
 
   } else {
-  // ⭐ Unterschied > 3% → ZWEI Termine mit großem Delay + Retry
+    // ⭐ ZWEI Termine → ZWEI Buttons
+    createButton("Akku A eintragen", () => {
+      openGoogleCalendar({
+        title: "Akku A fertig",
+        start: fertigA,
+        end: new Date(fertigA.getTime() + 5 * 60000),
+        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+      });
+    });
 
-// Termin 1: Akku A
-openGoogleCalendar({
-  title: "Akku A fertig",
-  start: fertigA,
-  end: new Date(fertigA.getTime() + 5 * 60000),
-  description: "Automatisch erzeugt durch Akku-Ladezeit-App"
-});
+    createButton("Akku B eintragen", () => {
+      openGoogleCalendar({
+        title: "Akku B fertig",
+        start: fertigB,
+        end: new Date(fertigB.getTime() + 5 * 60000),
+        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+      });
+    });
 
-// Termin 2: Akku B (mit großem Delay)
-setTimeout(() => {
-  openGoogleCalendar({
-    title: "Akku B fertig",
-    start: fertigB,
-    end: new Date(fertigB.getTime() + 5 * 60000),
-    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+    updateStatus("doneBoth");
+  }
+
+} else if (hasA) {
+
+  // ⭐ Nur Akku A
+  createButton("Akku A eintragen", () => {
+    openGoogleCalendar({
+      title: "Akku A fertig",
+      start: fertigA,
+      end: new Date(fertigA.getTime() + 5 * 60000),
+      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+    });
   });
-}, 3200); // ⭐ 3,2 Sekunden → mobil absolut zuverlässig
 
-// Optionaler Retry nach 5 Sekunden (falls Android blockiert)
-setTimeout(() => {
-  openGoogleCalendar({
-    title: "Akku B fertig",
-    start: fertigB,
-    end: new Date(fertigB.getTime() + 5 * 60000),
-    description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+  updateStatus("doneA");
+
+} else if (hasB) {
+
+  // ⭐ Nur Akku B
+  createButton("Akku B eintragen", () => {
+    openGoogleCalendar({
+      title: "Akku B fertig",
+      start: fertigB,
+      end: new Date(fertigB.getTime() + 5 * 60000),
+      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+    });
   });
-}, 5200); // ⭐ Fallback
+
+  updateStatus("doneB");
+}
+
 
     updateStatus("doneBoth");
   }
