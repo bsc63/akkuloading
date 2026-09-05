@@ -46,3 +46,7 @@ self.addEventListener("message", event => {
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
+
+self.addEventListener("fetch", event => {
+  // Wir müssen nichts cachen – aber Android braucht dieses Event
+});
