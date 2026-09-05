@@ -20,11 +20,21 @@ function sendToSW(msg) {
 }
 
 function createFinishEvent(title, dateObj) {
-  const startISO = dateObj.toISOString().slice(0, 16);
-  const endISO = new Date(dateObj.getTime() + 5 * 60000).toISOString().slice(0, 16);
+  // Datum + Uhrzeit IMMER vollständig erzeugen
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const hour = String(dateObj.getHours()).padStart(2, "0");
+  const min = String(dateObj.getMinutes()).padStart(2, "0");
+
+  const startISO = `${year}-${month}-${day}T${hour}:${min}:00`;
+
+  const endISO = new Date(dateObj.getTime() + 5 * 60000)
+    .toISOString()
+    .slice(0, 19);
 
   window.createCalendarEvent({
-    title: title,
+    title,
     start_at: startISO,
     end_at: endISO,
     description: "Automatisch erzeugt durch Akku-Ladezeit-App",
@@ -32,6 +42,7 @@ function createFinishEvent(title, dateObj) {
     reminder_type: "popup"
   });
 }
+
 
 
 function updateStatus(state) {
