@@ -48,14 +48,15 @@ function updateStatus(state) {
   status.classList.remove("ready", "running", "done");
 
   const map = {
-    ready: "Bereit",
-    runningA: "Berechnung läuft (Akku A)…",
-    runningB: "Berechnung läuft (Akku B)…",
-    runningBoth: "Berechnung läuft (beide Akkus)…",
-    doneA: "Akku A ist fertig",
-    doneB: "Akku B ist fertig",
-    doneBoth: "Beide Akkus sind fertig"
-  };
+  ready: "Bereit",
+  runningA: "Ladevorgang läuft…",
+  runningB: "Ladevorgang läuft…",
+  runningBoth: "Ladevorgang läuft…",
+  doneA: "Laden beendet",
+  doneB: "Laden beendet",
+  doneBoth: "Laden beendet"
+};
+
 
   status.innerText = map[state];
   status.classList.add(
