@@ -1,7 +1,7 @@
 let isRunning = false;
 let stopProgress = false;
 
-const APP_VERSION = "2026-09-05-1";
+const APP_VERSION = "2026-09-05-2";
 
 // Minimaler SW-Call (optional)
 function sendToSW(msg) {
@@ -11,70 +11,37 @@ function sendToSW(msg) {
   });
 }
 
-// ICS für EINEN Akku
-function downloadICS(title, dateObj) {
-  const dtStart = dateObj.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const dtEnd = new Date(dateObj.getTime() + 5 * 60000)
-    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+/**
+ * Öffnet die Google Kalender Maske direkt aus den PWA-Daten heraus.
+ * @param {Object} event
+ * @param {string} event.title - Titel des Termins
+ * @param {Date|string} event.start - Startzeit als Date-Objekt oder ISO-String
+ * @param {Date|string} event.end - Endzeit als Date-Objekt oder ISO-String
+ * @param {string} [event.description] - Beschreibung/Details
+ * @param {string} [event.location] - Ort
+ */
+function openGoogleCalendar(event) {
 
-  const ics = `
-BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-SUMMARY:${title}
-DTSTART:${dtStart}
-DTEND:${dtEnd}
-DESCRIPTION:Automatisch erzeugt durch Akku-Ladezeit-App
-END:VEVENT
-END:VCALENDAR`;
+  const formatGoogleDate = (dateVal) => {
+    const d = new Date(dateVal);
+    return d.toISOString().replace(/-|:|\.\d+/g, '');
+  };
 
-  const blob = new Blob([ics], { type: "text/calendar" });
-  const url = URL.createObjectURL(blob);
+  const startStr = formatGoogleDate(event.start);
+  const endStr = formatGoogleDate(event.end);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${title.replace(/\s+/g, "_")}.ics`;
-  a.click();
+  const title = encodeURIComponent(event.title || '');
+  const details = encodeURIComponent(event.description || '');
+  const location = encodeURIComponent(event.location || '');
 
-  URL.revokeObjectURL(url);
-}
+  const googleUrl =
+    `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+    `&text=${title}` +
+    `&dates=${startStr}/${endStr}` +
+    `&details=${details}` +
+    `&location=${location}`;
 
-// ICS für ZWEI Akkus in EINER Datei
-function downloadICSCombined(fertigA, fertigB) {
-  const dtStartA = fertigA.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const dtEndA = new Date(fertigA.getTime() + 5 * 60000)
-    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-
-  const dtStartB = fertigB.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const dtEndB = new Date(fertigB.getTime() + 5 * 60000)
-    .toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-
-  const ics = `
-BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-SUMMARY:Akku A fertig
-DTSTART:${dtStartA}
-DTEND:${dtEndA}
-DESCRIPTION:Automatisch erzeugt durch Akku-Ladezeit-App
-END:VEVENT
-BEGIN:VEVENT
-SUMMARY:Akku B fertig
-DTSTART:${dtStartB}
-DTEND:${dtEndB}
-DESCRIPTION:Automatisch erzeugt durch Akku-Ladezeit-App
-END:VEVENT
-END:VCALENDAR`;
-
-  const blob = new Blob([ics], { type: "text/calendar" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `akkus_fertig.ics`;
-  a.click();
-
-  URL.revokeObjectURL(url);
+  window.open(googleUrl, '_blank');
 }
 
 function updateStatus(state) {
@@ -86,9 +53,9 @@ function updateStatus(state) {
     runningA: "Berechnung läuft (Akku A)…",
     runningB: "Berechnung läuft (Akku B)…",
     runningBoth: "Berechnung läuft (beide Akkus)…",
-    doneA: "Akku A ist fertig (ICS erstellt)",
-    doneB: "Akku B ist fertig (ICS erstellt)",
-    doneBoth: "Beide Akkus sind fertig (ICS erstellt)"
+    doneA: "Akku A ist fertig (Kalender geöffnet)",
+    doneB: "Akku B ist fertig (Kalender geöffnet)",
+    doneBoth: "Beide Akkus sind fertig (Kalender geöffnet)"
   };
 
   status.innerText = map[state];
@@ -101,7 +68,7 @@ function updateStatus(state) {
 
 function updateButtons() {
   document.getElementById("calc").disabled = isRunning;
-  document.getElementById("reset").disabled = false; // Reset immer aktiv
+  document.getElementById("reset").disabled = false;
 }
 
 // ⭐ REALISTISCHE LADEZEIT-FORMEL
@@ -112,18 +79,15 @@ function ladezeitBerechnen(start, ziel, temp, power) {
   const delta = (ziel - start) / 100;
   const energie = kapazitaetWh * delta;
 
-  // CC-Phase: 0–60%
   const ccAnteil = Math.min(delta, 0.60);
   const ccZeit = (energie * (ccAnteil / delta)) / (power * eff);
 
-  // CV-Phase: 60–100% (realistisch 2.5x langsamer)
   const cvAnteil = Math.max(delta - 0.60, 0);
   const cvZeit = (energie * (cvAnteil / delta)) / (power * eff) * 2.5;
 
-  // Temperaturfaktor
   let tempFaktor = temp < 10 ? 1.25 : temp > 35 ? 1.15 : 1.0;
 
-  return (ccZeit + cvZeit) * tempFaktor * 60; // Minuten
+  return (ccZeit + cvZeit) * tempFaktor * 60;
 }
 
 function startProgress(durationMin, element) {
@@ -200,20 +164,48 @@ document.getElementById("calc").addEventListener("click", async () => {
     startProgress(minB, document.getElementById("progB"));
   }
 
-  // ICS-Logik
+  // ⭐ GOOGLE-KALENDER statt ICS
   if (hasA && hasB) {
     if (fertigA.getTime() === fertigB.getTime()) {
-      downloadICS("Beide Akkus fertig", fertigA);
+      openGoogleCalendar({
+        title: "Beide Akkus fertig",
+        start: fertigA,
+        end: new Date(fertigA.getTime() + 5 * 60000),
+        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+      });
       updateStatus("doneBoth");
     } else {
-      downloadICSCombined(fertigA, fertigB);
+      openGoogleCalendar({
+        title: "Akku A fertig",
+        start: fertigA,
+        end: new Date(fertigA.getTime() + 5 * 60000),
+        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+      });
+
+      openGoogleCalendar({
+        title: "Akku B fertig",
+        start: fertigB,
+        end: new Date(fertigB.getTime() + 5 * 60000),
+        description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+      });
+
       updateStatus("doneBoth");
     }
   } else if (hasA) {
-    downloadICS("Akku A fertig", fertigA);
+    openGoogleCalendar({
+      title: "Akku A fertig",
+      start: fertigA,
+      end: new Date(fertigA.getTime() + 5 * 60000),
+      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+    });
     updateStatus("doneA");
   } else if (hasB) {
-    downloadICS("Akku B fertig", fertigB);
+    openGoogleCalendar({
+      title: "Akku B fertig",
+      start: fertigB,
+      end: new Date(fertigB.getTime() + 5 * 60000),
+      description: "Automatisch erzeugt durch Akku-Ladezeit-App"
+    });
     updateStatus("doneB");
   }
 
