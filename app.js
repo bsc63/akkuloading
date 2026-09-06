@@ -70,7 +70,7 @@ function updateButtons() {
   document.getElementById("reset").disabled = false;
 }
 
-// ⭐ REALISTISCHE LADEZEIT (neue Version)
+// ⭐ REALISTISCHE LADEZEIT (4h-Modell)
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
@@ -89,12 +89,12 @@ function ladezeitBerechnen(start, ziel, temp, power) {
     return 0.60;
   }
 
-  // SOC-abhängige CV-Drosselung
+  // SOC-abhängige CV-Drosselung (stärker → 4h)
   function cvSocFaktor(soc) {
     if (soc < 0.85) return 1.0;
-    if (soc < 0.90) return 1.3;
-    if (soc < 0.95) return 1.8;
-    return 2.5;
+    if (soc < 0.90) return 1.6;
+    if (soc < 0.95) return 2.4;
+    return 3.5;
   }
 
   const socStart = start / 100;
@@ -113,22 +113,23 @@ function ladezeitBerechnen(start, ziel, temp, power) {
     cvAnteil = socZiel - ccEnd;
   }
 
-  // CC-Phase (linear, temperaturgedrosselt)
+  // CC-Phase
   const energieCC = kapazitaetWh * ccAnteil;
   const zeitCC = (energieCC / (power * eff)) * ccTempFaktor(temp);
 
-  // CV-Phase (exponentielle Abbremsung + SOC-Drosselung)
+  // CV-Phase (stärker gebremst)
   const energieCV = kapazitaetWh * cvAnteil;
 
-  const a = 3.2;
-  const k = 0.9;
-  const cvExp = k * (Math.exp(a * cvAnteil) - 1);
+  const a = 4.0;   // stärkerer exponent
+  const k = 1.1;   // stärkerer Basisfaktor
 
+  const cvExp = k * (Math.exp(a * cvAnteil) - 1);
   const zeitCV = (energieCV / (power * eff)) * cvExp * cvSocFaktor(socZiel);
 
   const zeitStunden = zeitCC + zeitCV;
 
   return zeitStunden * 60; // Minuten
+}
 
 // ⭐ KORREKTUR: startProgress wieder vollständig!
 function startProgress(durationMin, element) {
