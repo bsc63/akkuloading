@@ -5,12 +5,61 @@ let calendarButtons = null;
 
 window.addEventListener("load", () => {
   calendarButtons = document.getElementById("calendarButtons");
-  document.getElementById("power").value = 1000;
-  document.getElementById("temp").value = 15;
+
+  // --- Zielwerte laden ---
+  const lastZielA = Number(localStorage.getItem("zielA_last") || 100);
+  const lastZielB = Number(localStorage.getItem("zielB_last") || 100);
+  document.getElementById("zielA").value = lastZielA;
+  document.getElementById("zielB").value = lastZielB;
+
+  // --- Startwerte laden ---
+  document.getElementById("startA").value =
+    localStorage.getItem("startA_last") || "";
+  document.getElementById("startB").value =
+    localStorage.getItem("startB_last") || "";
+
+  // --- Leistung laden ---
+  document.getElementById("power").value =
+    localStorage.getItem("power_last") || 1000;
+
+  // --- Temperatur laden ---
+  document.getElementById("temp").value =
+    localStorage.getItem("temp_last") || 15;
+
+  // Parameter-Slider initialisieren
   initParamsUI();
+
   updateButtons();
   updateStatus("ready");
 });
+
+// Zielwerte speichern
+document.getElementById("zielA").addEventListener("input", () => {
+  localStorage.setItem("zielA_last", document.getElementById("zielA").value);
+});
+document.getElementById("zielB").addEventListener("input", () => {
+  localStorage.setItem("zielB_last", document.getElementById("zielB").value);
+});
+
+// Startwerte speichern
+document.getElementById("startA").addEventListener("input", () => {
+  localStorage.setItem("startA_last", document.getElementById("startA").value);
+});
+document.getElementById("startB").addEventListener("input", () => {
+  localStorage.setItem("startB_last", document.getElementById("startB").value);
+});
+
+// Leistung speichern
+document.getElementById("power").addEventListener("input", () => {
+  localStorage.setItem("power_last", document.getElementById("power").value);
+});
+
+// Temperatur speichern
+document.getElementById("temp").addEventListener("input", () => {
+  localStorage.setItem("temp_last", document.getElementById("temp").value);
+});
+
+
 
 const APP_VERSION = "2026-09-06-1";
 
