@@ -1,170 +1,246 @@
+:root {
+  color-scheme: light dark;
+  --md-primary: #4caf50;
+  --md-primary-dark: #388e3c;
+  --md-surface-light: #ffffff;
+  --md-surface-dark: #121212;
+  --md-border-light: #e0e0e0;
+  --md-border-dark: #333333;
+  --md-text-light: #212121;
+  --md-text-dark: #e0e0e0;
+  --md-muted-light: #757575;
+  --md-muted-dark: #bdbdbd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-surface: var(--md-surface-dark);
+    --md-border: var(--md-border-dark);
+    --md-text: var(--md-text-dark);
+    --md-muted: var(--md-muted-dark);
+    --md-bg: #000000;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --md-surface: var(--md-surface-light);
+    --md-border: var(--md-border-light);
+    --md-text: var(--md-text-light);
+    --md-muted: var(--md-muted-light);
+    --md-bg: #f5f5f5;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--md-bg);
+  color: var(--md-text);
+}
+
+.app-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--md-surface);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-bar h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.app-version {
+  font-size: 0.8rem;
+  color: var(--md-muted);
+}
+
+.container {
+  padding: 12px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .card {
-  background: #f7f7f7;
-  padding: 15px;
-  margin-bottom: 20px;
+  background: var(--md-surface);
   border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+input[type="number"],
+input[type="time"],
+input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+}
+
+input[type="number"],
+input[type="time"] {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--md-border);
+  background: transparent;
+  color: var(--md-text);
+}
+
+input[type="number"]:focus,
+input[type="time"]:focus {
+  outline: none;
+  border-color: var(--md-primary);
+}
+
+input[type="range"] {
+  accent-color: var(--md-primary);
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.col {
+  flex: 1 1 260px;
 }
 
 .progress {
-  width: 100%;
-  height: 10px;
-  background: #ddd;
-  border-radius: 5px;
-  margin-top: 10px;
+  height: 6px;
+  background: var(--md-border);
+  border-radius: 3px;
+  margin-top: 6px;
+  overflow: hidden;
 }
 
-.progress div {
-  height: 10px;
-  width: 0%;
-  background: #4CAF50;
-  border-radius: 5px;
+.bar {
+  height: 6px;
+  width: 0;
+  background: var(--md-primary);
+  transition: width 0.2s linear;
 }
 
-button {
-  padding: 10px 20px;
-  margin-right: 10px;
-  font-size: 16px;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.result {
+  font-size: 0.9rem;
+  margin-top: 4px;
 }
 
 .status {
-  margin-top: 15px;
-  font-weight: bold;
-  font-size: 18px;
+  margin: 0 0 8px 0;
+  font-weight: 600;
 }
 
 .status.ready {
-  color: #5cb85c;
+  color: var(--md-muted);
 }
 
 .status.running {
-  color: #0275d8;
-}
-
-.status.waiting {
-  color: #f0ad4e;
+  color: #1565c0;
 }
 
 .status.done {
-  color: #5cb85c;
+  color: var(--md-primary-dark);
 }
-/* Kalender-Buttons */
-.calendar-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  margin: 12px 0;
-  font-size: 18px;
-  font-weight: 600;
+
+.info-box {
+  font-size: 0.85rem;
+  color: var(--md-muted);
+  background: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.md-button {
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #4CAF50, #45A049);
-  color: white;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(0,0,0,0.04);
+  color: var(--md-text);
+}
+
+.md-button.primary {
+  background: var(--md-primary);
+  color: #ffffff;
+}
+
+.md-button.primary:hover {
+  background: var(--md-primary-dark);
+}
+
+.md-button.outlined {
+  background: transparent;
+  border: 1px solid var(--md-border);
+}
+
+.md-button:hover {
+  filter: brightness(1.05);
+}
+
+.calendar-buttons {
+  margin-top: 10px;
+}
+
+.calendar-btn {
+  width: 100%;
+  text-align: left;
+  border-radius: 20px;
+  border: none;
+  padding: 8px 12px;
+  margin-top: 6px;
+  background: rgba(76,175,80,0.12);
+  color: var(--md-text);
+  cursor: pointer;
 }
 
 .calendar-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+  background: rgba(76,175,80,0.2);
 }
 
-.calendar-btn:active {
-  transform: translateY(0px);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.18);
-}
-.calendar-btn::before {
-  content: "📅 ";
-  font-size: 22px;
-  vertical-align: middle;
-}
-#calc, #reset {
-  width: 100%;
-  padding: 14px;
-  margin-top: 10px;
-  font-size: 20px;
-  font-weight: 600;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  transition: 0.15s ease;
+.param-row {
+  margin-top: 8px;
 }
 
-#calc {
-  background: linear-gradient(135deg, #2196F3, #1976D2);
-  color: white;
+.param-value {
+  float: right;
+  font-size: 0.85rem;
+  color: var(--md-muted);
 }
 
-#calc:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
-}
-
-#reset {
-  background: #f44336;
-  color: white;
-  margin-bottom: 20px;
-}
-
-#reset:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
-}
-.status {
-  text-align: center;
-  font-size: 18px;
-  padding: 12px;
-  margin-top: 20px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.status.ready {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.status.running {
-  background: #f0f0f0;
-  color: #555;
-}
-
-.status.done {
-  background: #4CAF50;
-  color: white;
-}
-.progress {
-  width: 100%;
-  height: 12px;
-  background: #ddd;
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 10px 0;
-}
-
-#progA, #progB {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(135deg, #4CAF50, #81C784);
-  transition: width 0.2s linear;
-}
-.calendar-area {
-  margin-top: 20px;
-}
-.calendar-btn {
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+@media (max-width: 600px) {
+  .app-bar h1 {
+    font-size: 1rem;
+  }
+  .container {
+    padding: 8px;
+  }
 }
