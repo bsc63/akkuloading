@@ -2,72 +2,119 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
+  <title>Akku-Ladezeit-App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4CAF50">
-  <title>Akku-Ladezeit</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 10px; }
+    h1 { font-size: 1.4rem; }
+    label { display:block; margin-top:8px; }
+    input[type="number"], input[type="range"] { width: 100%; }
+    .row { display:flex; gap:10px; }
+    .col { flex:1; }
+    .progress { height:6px; background:#eee; margin-top:4px; }
+    .bar { height:6px; width:0; background:#4caf50; }
+    #status.ready { color:#555; }
+    #status.running { color:#1565c0; }
+    #status.done { color:#2e7d32; }
+    .calendar-btn { margin-top:5px; display:block; }
+    #editMode { border:1px solid #ccc; padding:10px; margin-top:10px; background:#fafafa; }
+    #editMode h3 { margin-top:0; }
+    .param-row { margin-bottom:8px; }
+    .param-row span { float:right; }
+    #infoBox { margin-top:10px; font-size:0.9rem; background:#f5f5f5; padding:8px; border-radius:4px; }
+    button { margin-top:8px; }
+  </style>
 </head>
-
 <body>
-  <header>
-    <h1>Akku-Ladezeit</h1>
-  </header>
+  <h1>Akku-Ladezeit-App</h1>
 
-  <section class="card">
-    <h2>Allgemein</h2>
+  <div id="infoBox">
+    🔋 <b>Akku A / B</b>: zwei getrennte Ladevorgänge<br>
+    ⚡ <b>Leistung (W)</b>: Ladegerät-Leistung<br>
+    🌡️ <b>Temperatur</b>: beeinflusst die Ladegeschwindigkeit<br>
+    ⏳ <b>Ladezeit</b>: berechnete Dauer<br>
+    📅 <b>Kalender</b>: Termin, wann der Akku fertig ist<br>
+    🛠️ <b>Editmodus</b>: Ladeformel-Parameter anpassen<br>
+    🧠 <b>Auto-Kalibrierung</b>: App lernt aus echten Ladezeiten
+  </div>
 
-    <label>Temperatur (°C)</label>
-    <input id="temp" type="number" value="15">
+  <p id="status" class="ready">Bereit</p>
 
-    <label>Ladegerät (W)</label>
-    <input id="power" type="number" value="1000">
-  </section>
+  <div class="row">
+    <div class="col">
+      <h3>Akku A</h3>
+      <label>Start (%)</label>
+      <input type="number" id="startA" min="0" max="100">
+      <label>Ziel (%)</label>
+      <input type="number" id="zielA" min="0" max="100">
+      <div class="progress"><div id="progA" class="bar"></div></div>
+      <p id="resultA"></p>
+    </div>
+    <div class="col">
+      <h3>Akku B</h3>
+      <label>Start (%)</label>
+      <input type="number" id="startB" min="0" max="100">
+      <label>Ziel (%)</label>
+      <input type="number" id="zielB" min="0" max="100">
+      <div class="progress"><div id="progB" class="bar"></div></div>
+      <p id="resultB"></p>
+    </div>
+  </div>
 
-  <section class="card">
-    <h2>Akku A</h2>
+  <label>Leistung (W)</label>
+  <input type="number" id="power" min="100" max="3000" step="50">
 
-    <label>Start (%)</label>
-    <input id="startA" type="number" min="0" max="100">
-
-    <label>Ziel (%)</label>
-    <input id="zielA" type="number" value="100">
-
-    <div class="progress"><div id="progA"></div></div>
-    <p id="resultA" class="time"></p>
-  </section>
-
-  <section class="card">
-    <h2>Akku B</h2>
-
-    <label>Start (%)</label>
-    <input id="startB" type="number" min="0" max="100">
-
-    <label>Ziel (%)</label>
-    <input id="zielB" type="number" value="100">
-
-    <div class="progress"><div id="progB"></div></div>
-    <p id="resultB" class="time"></p>
-  </section>
+  <label>Temperatur (°C)</label>
+  <input type="number" id="temp" min="-10" max="50">
 
   <button id="calc">Berechnen</button>
-  <button id="reset">Zurücksetzen</button>
+  <button id="reset">Reset</button>
+  <button id="openEdit">Parameter bearbeiten</button>
 
-  <!-- ⭐ NEU: Kalender-Buttons erscheinen hier -->
-  <div id="calendarButtons" class="calendar-area"></div>
+  <div id="calendarButtons"></div>
 
-  <p id="status" class="status ready">Bereit</p>
+  <!-- Auto-Kalibrierung -->
+  <div id="calibBox" style="margin-top:10px; display:none;">
+    <h3>Auto-Kalibrierung</h3>
+    <p>Wenn der Akku wirklich fertig war, kannst du hier die reale Zeit eintragen.</p>
+    <label>Reale Fertigzeit (HH:MM)</label>
+    <input type="time" id="realTime">
+    <button id="applyCalib">Kalibrierung anwenden</button>
+  </div>
+
+  <!-- Editmodus -->
+  <div id="editMode" style="display:none;">
+    <h3>Parameter bearbeiten</h3>
+
+    <div class="param-row">
+      <label>CV-Exponent (a) <span id="val_a"></span></label>
+      <input type="range" id="param_a" min="1" max="6" step="0.1">
+    </div>
+
+    <div class="param-row">
+      <label>CV-Basisfaktor (k) <span id="val_k"></span></label>
+      <input type="range" id="param_k" min="0.5" max="2" step="0.1">
+    </div>
+
+    <div class="param-row">
+      <label>Faktor 85–90% <span id="val_cv85"></span></label>
+      <input type="range" id="param_cv85" min="1" max="3" step="0.1">
+    </div>
+
+    <div class="param-row">
+      <label>Faktor 90–95% <span id="val_cv90"></span></label>
+      <input type="range" id="param_cv90" min="1" max="4" step="0.1">
+    </div>
+
+    <div class="param-row">
+      <label>Faktor 95–100% <span id="val_cv95"></span></label>
+      <input type="range" id="param_cv95" min="1" max="5" step="0.1">
+    </div>
+
+    <button id="saveParams">Parameter speichern</button>
+    <button id="closeEdit">Schließen</button>
+  </div>
 
   <script src="app.js"></script>
-
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").then(reg => {
-        // Version wird in app.js über sendToSW gesendet
-      });
-    }
-  </script>
 </body>
 </html>
