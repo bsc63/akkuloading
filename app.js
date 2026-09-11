@@ -33,6 +33,7 @@ window.addEventListener("load", () => {
   updateStatus("ready");
 });
 
+
 // Zielwerte speichern
 document.getElementById("zielA").addEventListener("input", () => {
   localStorage.setItem("zielA_last", document.getElementById("zielA").value);
@@ -60,8 +61,7 @@ document.getElementById("temp").addEventListener("input", () => {
 });
 
 
-
-const APP_VERSION = "2026-09-06-1";
+const APP_VERSION = "2026-09-11-SOC-1";
 
 // Parameter (werden aus localStorage geladen)
 const params = {
@@ -71,6 +71,24 @@ const params = {
   cv90: Number(localStorage.getItem("p_cv90") || 2.4),
   cv95: Number(localStorage.getItem("p_cv95") || 3.5)
 };
+
+// SOC‑Korrekturfaktoren laden oder initialisieren
+let socCorr = JSON.parse(localStorage.getItem("socCorr") || "{}");
+
+if (!socCorr["0_20"]) socCorr["0_20"] = 1.0;
+if (!socCorr["20_40"]) socCorr["20_40"] = 1.0;
+if (!socCorr["40_60"]) socCorr["40_60"] = 1.0;
+if (!socCorr["60_80"]) socCorr["60_80"] = 1.0;
+if (!socCorr["80_100"]) socCorr["80_100"] = 1.0;
+
+// SOC-Zone bestimmen
+function getZone(start) {
+  if (start < 20) return "0_20";
+  if (start < 40) return "20_40";
+  if (start < 60) return "40_60";
+  if (start < 80) return "60_80";
+  return "80_100";
+}
 
 function saveParams() {
   localStorage.setItem("p_a", params.a);
@@ -169,59 +187,41 @@ function updateButtons() {
   document.getElementById("reset").disabled = false;
 }
 
-// Ladezeit-Berechnung mit Parametern
+// Ladezeit-Berechnung mit SOC‑Korrektur
 function ladezeitBerechnen(start, ziel, temp, power) {
+
+  // --- SOC‑Zone bestimmen ---
+  const zone = getZone(start);
+  const corr = socCorr[zone] || 1.0;
+
+  // --- SOC‑korrigierte Parameter ---
+  const p = {
+    a: params.a * corr,
+    k: params.k * corr,
+    cv85: params.cv85 * corr,
+    cv90: params.cv90 * corr,
+    cv95: params.cv95 * corr
+  };
+
+  // --- Temperaturfaktor ---
+  let tempFaktor = 1.0;
+  if (temp < 10) tempFaktor = 1.25;
+  if (temp > 35) tempFaktor = 1.15;
+
+  // --- CV-Verlangsamung ---
+  let cvVerlangsamung = 1.0;
+  if (ziel > 85) cvVerlangsamung = p.cv85;
+  if (ziel > 90) cvVerlangsamung = p.cv90;
+  if (ziel > 95) cvVerlangsamung = p.cv95;
+
+  // --- Energiebedarf ---
   const kapazitaetWh = 1248;
   const eff = 0.90;
-
   const delta = (ziel - start) / 100;
+  const energie = kapazitaetWh * delta;
 
-  function ccTempFaktor(temp) {
-    if (temp < 0) return 0.40;
-    if (temp < 5) return 0.55;
-    if (temp < 10) return 0.70;
-    if (temp < 15) return 0.85;
-    if (temp <= 30) return 1.00;
-    if (temp <= 35) return 0.90;
-    if (temp <= 40) return 0.75;
-    return 0.60;
-  }
-
-  function cvSocFaktor(soc) {
-    if (soc < 0.85) return 1.0;
-    if (soc < 0.90) return params.cv85;
-    if (soc < 0.95) return params.cv90;
-    return params.cv95;
-  }
-
-  const socStart = start / 100;
-  const socZiel = ziel / 100;
-  const ccEnd = 0.70;
-
-  let ccAnteil = 0;
-  let cvAnteil = 0;
-
-  if (socZiel <= ccEnd) {
-    ccAnteil = delta;
-  } else if (socStart >= ccEnd) {
-    cvAnteil = delta;
-  } else {
-    ccAnteil = ccEnd - socStart;
-    cvAnteil = socZiel - ccEnd;
-  }
-
-  const energieCC = kapazitaetWh * ccAnteil;
-  const zeitCC = (energieCC / (power * eff)) * ccTempFaktor(temp);
-
-  const energieCV = kapazitaetWh * cvAnteil;
-
-  const a = params.a;
-  const k = params.k;
-
-  const cvExp = k * (Math.exp(a * cvAnteil) - 1);
-  const zeitCV = (energieCV / (power * eff)) * cvExp * cvSocFaktor(socZiel);
-
-  const zeitStunden = zeitCC + zeitCV;
+  // --- Grundformel ---
+  const zeitStunden = (energie / (power * eff)) * tempFaktor * cvVerlangsamung;
 
   return zeitStunden * 60; // Minuten
 }
@@ -412,17 +412,17 @@ document.getElementById("applyCalib").addEventListener("click", () => {
   }
 
   const [hh, mm] = realInput.split(":").map(Number);
-  // Reale Zeit IMMER auf heutiges Datum setzen
-const now = new Date();
-const realDate = new Date(
-  now.getFullYear(),
-  now.getMonth(),
-  now.getDate(),
-  hh,
-  mm,
-  0
-);
 
+  // Reale Zeit IMMER auf heutiges Datum setzen
+  const now = new Date();
+  const realDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    hh,
+    mm,
+    0
+  );
 
   const realMin = (realDate.getTime() - Date.now()) / 60000;
   if (realMin <= 0) {
@@ -432,22 +432,19 @@ const realDate = new Date(
 
   const factor = realMin / lastCalc.berechnetMin;
 
-  // einfache Kalibrierung: CV-Faktoren skalieren
-  // Glättung: nur 30% des Faktors übernehmen
-const smooth = 0.3;
+  // Zone bestimmen
+  const zone = getZone(lastCalc.start);
 
-// CV-Faktoren sanft anpassen
-params.cv85 *= (1 + (factor - 1) * smooth);
-params.cv90 *= (1 + (factor - 1) * smooth);
-params.cv95 *= (1 + (factor - 1) * smooth);
+  // Glättung: nur 30% übernehmen
+  const smooth = 0.3;
 
-// Exponent etwas weniger stark anpassen
-params.a *= (1 + (factor - 1) * smooth * 0.5);
+  // SOC‑Zonenfaktor aktualisieren
+  socCorr[zone] *= (1 + (factor - 1) * smooth);
 
+  // Speichern
+  localStorage.setItem("socCorr", JSON.stringify(socCorr));
 
-  saveParams();
-
-  alert("Kalibrierung angewendet. Die App nutzt ab jetzt angepasste Parameter.");
+  alert("Kalibrierung gespeichert (SOC‑Zone " + zone + ")");
 
   document.getElementById("calibBox").style.display = "none";
 });
