@@ -7,11 +7,59 @@ window.addEventListener("load", () => {
   calendarButtons = document.getElementById("calendarButtons");
   document.getElementById("power").value = 1000;
   document.getElementById("temp").value = 15;
+  initParamsUI();
 });
 
-const APP_VERSION = "2026-09-05-3";
+const APP_VERSION = "2026-09-06-1";
 
-// Minimaler SW-Call
+// Parameter (werden aus localStorage geladen)
+const params = {
+  a: Number(localStorage.getItem("p_a") || 4.0),
+  k: Number(localStorage.getItem("p_k") || 1.1),
+  cv85: Number(localStorage.getItem("p_cv85") || 1.6),
+  cv90: Number(localStorage.getItem("p_cv90") || 2.4),
+  cv95: Number(localStorage.getItem("p_cv95") || 3.5)
+};
+
+function saveParams() {
+  localStorage.setItem("p_a", params.a);
+  localStorage.setItem("p_k", params.k);
+  localStorage.setItem("p_cv85", params.cv85);
+  localStorage.setItem("p_cv90", params.cv90);
+  localStorage.setItem("p_cv95", params.cv95);
+}
+
+function initParamsUI() {
+  const setSlider = (id, valSpan, value) => {
+    const s = document.getElementById(id);
+    const v = document.getElementById(valSpan);
+    s.value = value;
+    v.innerText = value.toFixed(2);
+  };
+
+  setSlider("param_a", "val_a", params.a);
+  setSlider("param_k", "val_k", params.k);
+  setSlider("param_cv85", "val_cv85", params.cv85);
+  setSlider("param_cv90", "val_cv90", params.cv90);
+  setSlider("param_cv95", "val_cv95", params.cv95);
+
+  const bindSlider = (id, key, spanId) => {
+    const s = document.getElementById(id);
+    const v = document.getElementById(spanId);
+    s.addEventListener("input", () => {
+      params[key] = Number(s.value);
+      v.innerText = s.value;
+    });
+  };
+
+  bindSlider("param_a", "a", "val_a");
+  bindSlider("param_k", "k", "val_k");
+  bindSlider("param_cv85", "cv85", "val_cv85");
+  bindSlider("param_cv90", "cv90", "val_cv90");
+  bindSlider("param_cv95", "cv95", "val_cv95");
+}
+
+// Minimaler SW-Call (optional, wie gehabt)
 function sendToSW(msg) {
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.ready.then(reg => {
@@ -70,14 +118,13 @@ function updateButtons() {
   document.getElementById("reset").disabled = false;
 }
 
-// ⭐ REALISTISCHE LADEZEIT (4h-Modell)
+// Ladezeit-Berechnung mit Parametern
 function ladezeitBerechnen(start, ziel, temp, power) {
   const kapazitaetWh = 1248;
   const eff = 0.90;
 
   const delta = (ziel - start) / 100;
 
-  // Temperatur-Drosselung für CC-Phase
   function ccTempFaktor(temp) {
     if (temp < 0) return 0.40;
     if (temp < 5) return 0.55;
@@ -89,12 +136,11 @@ function ladezeitBerechnen(start, ziel, temp, power) {
     return 0.60;
   }
 
-  // SOC-abhängige CV-Drosselung (stärker → 4h)
   function cvSocFaktor(soc) {
     if (soc < 0.85) return 1.0;
-    if (soc < 0.90) return 1.6;
-    if (soc < 0.95) return 2.4;
-    return 3.5;
+    if (soc < 0.90) return params.cv85;
+    if (soc < 0.95) return params.cv90;
+    return params.cv95;
   }
 
   const socStart = start / 100;
@@ -113,15 +159,13 @@ function ladezeitBerechnen(start, ziel, temp, power) {
     cvAnteil = socZiel - ccEnd;
   }
 
-  // CC-Phase
   const energieCC = kapazitaetWh * ccAnteil;
   const zeitCC = (energieCC / (power * eff)) * ccTempFaktor(temp);
 
-  // CV-Phase (stärker gebremst)
   const energieCV = kapazitaetWh * cvAnteil;
 
-  const a = 4.0;   // stärkerer exponent
-  const k = 1.1;   // stärkerer Basisfaktor
+  const a = params.a;
+  const k = params.k;
 
   const cvExp = k * (Math.exp(a * cvAnteil) - 1);
   const zeitCV = (energieCV / (power * eff)) * cvExp * cvSocFaktor(socZiel);
@@ -131,7 +175,6 @@ function ladezeitBerechnen(start, ziel, temp, power) {
   return zeitStunden * 60; // Minuten
 }
 
-// ⭐ KORREKTUR: startProgress wieder vollständig!
 function startProgress(durationMin, element) {
   stopProgress = false;
 
@@ -151,7 +194,10 @@ function startProgress(durationMin, element) {
   update();
 }
 
-// ⭐ BERECHNEN
+// Auto-Kalibrierungsdaten
+let lastCalc = null;
+
+// BERECHNEN
 document.getElementById("calc").addEventListener("click", async () => {
   if (isRunning) return;
 
@@ -210,14 +256,12 @@ document.getElementById("calc").addEventListener("click", async () => {
     startProgress(minB, document.getElementById("progB"));
   }
 
-  // Status nach Ablauf der längeren Ladezeit umschalten
   setTimeout(() => {
     if (hasA && hasB) updateStatus("doneBoth");
     else if (hasA) updateStatus("doneA");
     else if (hasB) updateStatus("doneB");
   }, maxMin * 60000);
 
-  // ⭐ Kalender-Buttons erzeugen
   calendarButtons.innerHTML = "";
 
   const diff = Math.abs(Number(startA) - Number(startB));
@@ -231,9 +275,7 @@ document.getElementById("calc").addEventListener("click", async () => {
   }
 
   if (hasA && hasB) {
-
     if (diff <= 3) {
-      // EIN Termin
       createButton("Beide Akkus eintragen", () => {
         const start = fertigA < fertigB ? fertigA : fertigB;
         openGoogleCalendar({
@@ -246,9 +288,7 @@ document.getElementById("calc").addEventListener("click", async () => {
             `Automatisch erzeugt durch Akku-Ladezeit-App`
         });
       });
-
     } else {
-      // ZWEI Buttons
       createButton("Akku A eintragen", () => {
         openGoogleCalendar({
           title: "Akku A fertig",
@@ -267,9 +307,7 @@ document.getElementById("calc").addEventListener("click", async () => {
         });
       });
     }
-
   } else if (hasA) {
-
     createButton("Akku A eintragen", () => {
       openGoogleCalendar({
         title: "Akku A fertig",
@@ -278,9 +316,7 @@ document.getElementById("calc").addEventListener("click", async () => {
         description: "Automatisch erzeugt durch Akku-Ladezeit-App"
       });
     });
-
   } else if (hasB) {
-
     createButton("Akku B eintragen", () => {
       openGoogleCalendar({
         title: "Akku B fertig",
@@ -289,11 +325,80 @@ document.getElementById("calc").addEventListener("click", async () => {
         description: "Automatisch erzeugt durch Akku-Ladezeit-App"
       });
     });
+  }
 
+  // Auto-Kalibrierung vorbereiten (nur für Akku A, als Referenz)
+  if (hasA && fertigA) {
+    lastCalc = {
+      start: Number(startA),
+      ziel: Number(zielA),
+      temp,
+      power,
+      berechnetMin: (fertigA.getTime() - Date.now()) / 60000,
+      fertigZeit: fertigA
+    };
+    document.getElementById("calibBox").style.display = "block";
+  } else {
+    lastCalc = null;
+    document.getElementById("calibBox").style.display = "none";
   }
 
   isRunning = false;
   updateButtons();
+});
+
+// Auto-Kalibrierung anwenden
+document.getElementById("applyCalib").addEventListener("click", () => {
+  if (!lastCalc) {
+    alert("Keine Berechnung vorhanden.");
+    return;
+  }
+
+  const realInput = document.getElementById("realTime").value;
+  if (!realInput) {
+    alert("Bitte reale Fertigzeit eingeben.");
+    return;
+  }
+
+  const [hh, mm] = realInput.split(":").map(Number);
+  const realDate = new Date(lastCalc.fertigZeit);
+  realDate.setHours(hh);
+  realDate.setMinutes(mm);
+  realDate.setSeconds(0);
+
+  const realMin = (realDate.getTime() - Date.now()) / 60000;
+  if (realMin <= 0) {
+    alert("Reale Zeit liegt in der Vergangenheit – bitte sinnvoll eingeben.");
+    return;
+  }
+
+  const factor = realMin / lastCalc.berechnetMin;
+
+  // einfache Kalibrierung: CV-Faktoren skalieren
+  params.cv85 *= factor;
+  params.cv90 *= factor;
+  params.cv95 *= factor;
+  params.a *= factor * 0.5; // Exponent etwas mitziehen
+
+  saveParams();
+
+  alert("Kalibrierung angewendet. Die App nutzt ab jetzt angepasste Parameter.");
+
+  document.getElementById("calibBox").style.display = "none";
+});
+
+// Editmodus öffnen/schließen
+document.getElementById("openEdit").addEventListener("click", () => {
+  document.getElementById("editMode").style.display = "block";
+});
+
+document.getElementById("closeEdit").addEventListener("click", () => {
+  document.getElementById("editMode").style.display = "none";
+});
+
+document.getElementById("saveParams").addEventListener("click", () => {
+  saveParams();
+  alert("Parameter gespeichert.");
 });
 
 // RESET
