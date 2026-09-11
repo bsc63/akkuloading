@@ -433,10 +433,17 @@ const realDate = new Date(
   const factor = realMin / lastCalc.berechnetMin;
 
   // einfache Kalibrierung: CV-Faktoren skalieren
-  params.cv85 *= factor;
-  params.cv90 *= factor;
-  params.cv95 *= factor;
-  params.a *= factor * 0.5;
+  // Glättung: nur 30% des Faktors übernehmen
+const smooth = 0.3;
+
+// CV-Faktoren sanft anpassen
+params.cv85 *= (1 + (factor - 1) * smooth);
+params.cv90 *= (1 + (factor - 1) * smooth);
+params.cv95 *= (1 + (factor - 1) * smooth);
+
+// Exponent etwas weniger stark anpassen
+params.a *= (1 + (factor - 1) * smooth * 0.5);
+
 
   saveParams();
 
