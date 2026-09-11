@@ -8,6 +8,8 @@ window.addEventListener("load", () => {
   document.getElementById("power").value = 1000;
   document.getElementById("temp").value = 15;
   initParamsUI();
+  updateButtons();
+  updateStatus("ready");
 });
 
 const APP_VERSION = "2026-09-06-1";
@@ -59,7 +61,7 @@ function initParamsUI() {
   bindSlider("param_cv95", "cv95", "val_cv95");
 }
 
-// Minimaler SW-Call (optional, wie gehabt)
+// Minimaler SW-Call (optional)
 function sendToSW(msg) {
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.ready.then(reg => {
@@ -327,7 +329,7 @@ document.getElementById("calc").addEventListener("click", async () => {
     });
   }
 
-  // Auto-Kalibrierung vorbereiten (nur für Akku A, als Referenz)
+  // Auto-Kalibrierung vorbereiten (Akku A als Referenz)
   if (hasA && fertigA) {
     lastCalc = {
       start: Number(startA),
@@ -378,7 +380,7 @@ document.getElementById("applyCalib").addEventListener("click", () => {
   params.cv85 *= factor;
   params.cv90 *= factor;
   params.cv95 *= factor;
-  params.a *= factor * 0.5; // Exponent etwas mitziehen
+  params.a *= factor * 0.5;
 
   saveParams();
 
@@ -405,6 +407,3 @@ document.getElementById("saveParams").addEventListener("click", () => {
 document.getElementById("reset").addEventListener("click", () => {
   window.location.reload();
 });
-
-updateButtons();
-updateStatus("ready");
