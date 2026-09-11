@@ -412,10 +412,17 @@ document.getElementById("applyCalib").addEventListener("click", () => {
   }
 
   const [hh, mm] = realInput.split(":").map(Number);
-  const realDate = new Date(lastCalc.fertigZeit);
-  realDate.setHours(hh);
-  realDate.setMinutes(mm);
-  realDate.setSeconds(0);
+  // Reale Zeit IMMER auf heutiges Datum setzen
+const now = new Date();
+const realDate = new Date(
+  now.getFullYear(),
+  now.getMonth(),
+  now.getDate(),
+  hh,
+  mm,
+  0
+);
+
 
   const realMin = (realDate.getTime() - Date.now()) / 60000;
   if (realMin <= 0) {
